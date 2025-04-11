@@ -11,7 +11,8 @@ from starlette.responses import Response
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-estimator = ImprovedGlucoseEstimator()from fastapi import FastAPI, Request
+estimator = ImprovedGlucoseEstimator()
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
