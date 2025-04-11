@@ -58,3 +58,22 @@ def glucose_chart():
         "values": estimator.glucose_values[-100:],  # limit last 100 values
         "times": estimator.time_values[-100:]
     }
+app.mount("/static", StaticFiles(directory="static"), name="static")
+from fastapi import UploadFile, File
+from fastapi.responses import JSONResponse
+import base64
+from io import BytesIO
+from PIL import Image
+
+@app.post("/predict/")
+async def predict(file: UploadFile = File(...)):
+    contents = await file.read()
+    np_arr = np.frombuffer(contents, np.uint8)
+    frame = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+
+    processed_frame, glucose = estimator.process_frame(frame)
+
+    if glucose is None:
+        return JSONResponse(content={"status": "collecting", "collected": len(estimator.feature_buffer)}, status_code=202)
+
+    return {"glucose": glucose}
