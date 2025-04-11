@@ -117,73 +117,13 @@
 
         <div class="row">
             <!-- Main video feed and glucose reading -->
-            <div class="col-12 col-md-8">
-                <div class="card">
-                    <div class="card-header">Camera Feed</div>
-                    <div class="card-body p-0">
-                        <div class="video-container">
-                            <video id="webcam" autoplay playsinline class="w-100"></video>
-                            <canvas id="canvas" style="display: none;"></canvas>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">Glucose Trend</div>
-                    <div class="card-body">
-                        <div class="chart-container">
-                            <canvas id="glucoseChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        
-            <!-- Side panel with glucose reading and eye tracking -->
-            <div class="col-12 col-md-4">
-                <div class="card">
-                    <div class="card-header">Current Glucose Level</div>
-                    <div class="card-body p-0">
-                        <div id="glucoseValue" class="glucose-value glucose-normal">-- mg/dL</div>
-                        <div class="text-center mb-3">
-                            <span id="glucoseStatus">Waiting for data...</span>
-                        </div>
-                    </div>
-                </div>
-        
-                <div class="card">
-                    <div class="card-header">Eye Tracking</div>
-                    <div class="card-body p-0">
-                        <div class="eye-tracking-display">
-                            <img src="{{ url_for('eye_feed') }}" alt="Eye Tracking" class="img-fluid" style="object-fit: contain; width: 100%; height: 100%;">
-                        </div>
-                    </div>
-                </div>
-        
-                <div class="card">
-                    <div class="card-header">Instructions</div>
-                    <div class="card-body">
-                        <ul>
-                            <li>Make sure your face is well-lit</li>
-                            <li>Look directly at the camera</li>
-                            <li>Keep your eyes open</li>
-                            <li>Stay still during measurement</li>
-                            <li>Wait for data collection (20 frames)</li>
-                        </ul>
-                        <div class="alert alert-info mt-3">
-                            <small>This is a simulation for demonstration purposes. Real glucose monitoring would require medical-grade calibration and validation.</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
+            <div class="col-md-8">
                 <div class="card">
                     <div class="card-header">Camera Feed</div>
                     <div class="card-body p-0">
                         <div class="video-container">
                             <video id="webcam" autoplay playsinline width="100%"></video>
                             <canvas id="canvas" style="display: none;"></canvas>
-                            
                         </div>
                     </div>
                 </div>
@@ -364,8 +304,56 @@
         setInterval(fetchGlucoseData, 1000);  // Check glucose every second
         setInterval(updateChart, 5000);       // Update chart every 5 seconds
     </script>
-    
-            
+    <script>
+        const video = document.getElementById('webcam');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        
+        navigator.mediaDevices.getUserMedia({ video: true })
+        .then(stream => {
+            video.srcObject = stream;
+            video.play();
+            updateStatus(true);
+        })
+        .catch(err => {
+            console.error("Camera error:", err);
+            updateStatus(false);
+        });
+        
+        function captureFrameAndSend() {
+            const width = video.videoWidth;
+            const height = video.videoHeight;
+            if (width === 0 || height === 0) return;
+        
+            canvas.width = width;
+            canvas.height = height;
+            context.drawImage(video, 0, 0, width, height);
+        
+            canvas.toBlob(blob => {
+                const formData = new FormData();
+                formData.append('file', blob, 'frame.jpg');
+        
+                fetch('/predict/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.glucose) {
+                        updateGlucoseDisplay(data.glucose);
+                        glucoseChart.data.labels.push(new Date().toLocaleTimeString());
+                        glucoseChart.data.datasets[0].data.push(data.glucose);
+                        glucoseChart.update();
+                    }
+                })
+                .catch(err => {
+                    console.error("Prediction error:", err);
+                });
+            }, 'image/jpeg');
+        }
+        
+        setInterval(captureFrameAndSend, 2000);  // Send frame every 2 seconds
+        </script>
         
 </body>
 </html>
