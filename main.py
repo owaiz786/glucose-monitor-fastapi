@@ -2,14 +2,12 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import csv
+
 import cv2
 import numpy as np
 from estimator import ImprovedGlucoseEstimator
 import io
 from starlette.responses import Response
-from datetime import datetime
-
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
@@ -79,12 +77,3 @@ async def predict(file: UploadFile = File(...)):
         return JSONResponse(content={"status": "collecting", "collected": len(estimator.feature_buffer)}, status_code=202)
 
     return {"glucose": glucose}
-from fastapi import Body
-
-@app.post("/log_actual")
-async def log_actual(value: float = Body(..., embed=True)):
-    with open("actual_glucose_log.csv", "a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow([datetime.now().isoformat(), value])
-    return {"message": f"Logged: {value} mg/dL"}
-
